@@ -1,0 +1,95 @@
+version: v1
+environment: ambient
+coding_environment: full
+
+components:
+  - name: opensec_remediation
+    type: AgentComponent
+    prompt_id: opensec_remediation_prompt
+    inputs:
+      - from: context:goal
+        as: goal
+      - from: context:project_id
+        as: project_id
+      - from: context:project_http_url_to_repo
+        as: repo_url
+      - from: context:inputs.agent_platform_standard_context.primary_branch
+        as: primary_branch
+        optional: true
+      - from: context:inputs.user_rule
+        as: agents_dot_md
+        optional: true
+    toolset:
+      - list_dir
+      - find_files
+      - grep
+      - read_file
+      - run_command
+      - create_branch
+      - create_merge_request
+      - get_merge_request
+      - create_merge_request_note
+    require_tool_approval: true
+    pre_approved_tools:
+      - list_dir
+      - find_files
+      - grep
+      - read_file
+    ui_log_events:
+      - on_agent_final_answer
+      - on_tool_execution_success
+      - on_tool_execution_failed
+      - on_tool_approval_request
+
+routers:
+  - from: opensec_remediation
+    to: end
+
+flow:
+  entry_point: opensec_remediation
+  inputs:
+    - category: agent_platform_standard_context
+      input_schema:
+        primary_branch:
+          type: string
+          description: The protected default branch.
+        workload_branch:
+          type: string
+          description: The isolated branch allocated to this flow.
+        session_owner_id:
+          type: string
+          description: The user who initiated the flow.
+
+prompts:
+  - prompt_id: opensec_remediation_prompt
+    name: OpenSec Remediation Flow
+    unit_primitives: []
+    prompt_template:
+      system: |
+        You are OpenSec Remediation Flow, a security remediation agent for GitLab.
+        Work only in the provided isolated workload branch. Never push to or merge into
+        the protected default branch. Read AGENTS.md and follow its constraints.
+
+        For a merge request or explicit remediation request:
+        1. Inspect the repository and run the deterministic command `npm run build` followed by
+           `node dist/bin/cmdr.js scan . --quick --ci`, saving the structured findings.
+        2. Inspect evidence and prioritize actionable HIGH and CRITICAL findings. Do not treat
+           demo fixtures as production code; use them only for proof.
+        3. Make the smallest safe patch. Do not expose credentials or run exploit code against
+           production services. Proof runs must use a disposable copy with network disabled.
+        4. Run build, lint, unit tests, the relevant regression test, and the isolated proof again.
+        5. Create a merge request with the patch and evidence. Do not merge it automatically.
+        6. Report exact commands, outcomes, unresolved findings, and any unavailable external
+           GitLab/Duo/deployment capability. When the pipeline or proof fails, say so explicitly.
+
+        When the evidence-backed merge request is created or the request cannot safely proceed,
+        your final answer must summarize the findings, files changed, tests, proof result, MR URL,
+        and blockers. No further steps are needed after that.
+      user: |
+        Project ID: {{ project_id }}
+        Repository: {{ repo_url }}
+        Protected branch: {{ primary_branch }}
+        Goal or merge request context: {{ goal }}
+        Project security instructions: {{ agents_dot_md }}
+    params:
+      timeout: 900

@@ -69,3 +69,19 @@ There is **no scanning logic** — it is an LLM agent loop pointed at a director
 The upgrade adds a **real deterministic pipeline** (`src/security/`) that runs
 independently of the LLM for detection, uses the LLM only for triage/fix synthesis,
 and writes real, structured, shareable artifacts.
+
+## 6. Current state after the GitLab upgrade
+
+The sections above are a historical pre-upgrade snapshot and are intentionally
+not a description of the current tree. The current implementation includes:
+
+- deterministic scan, fix, prove, and report commands with structured findings;
+- `.gitlab-ci.yml` jobs for validation, tests, deterministic scanning, artifacts,
+  isolated proof, packaging, restricted manual deployment, and health checks;
+- `.gitlab/duo/flows/opensec-remediation.yml` as the OpenSec Remediation Flow;
+- project-level `AGENTS.md` safety constraints;
+- a local browser-accessible Live Lab at `npm run live-lab`.
+
+The GitLab pipeline and Duo flow require a GitLab project, runner, Duo Agent
+Platform enablement, and deployment variables to execute remotely. No public
+deployment URL or real GitLab pipeline execution is claimed by this local audit.

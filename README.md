@@ -178,6 +178,37 @@ opensec serve --port 4141    # Start HTTP + MCP server
 opensec -m llama3.2:3b       # Override Ollama model
 ```
 
+## GitLab Transcend / OpenSec Remediation Flow
+
+This repository includes a GitLab-native Path B implementation:
+
+- `.gitlab-ci.yml` runs Node 20 validation, build/lint/unit tests, deterministic
+  OpenSec scanning, HTML/JSON artifacts, isolated proof verification, packaging,
+  an allowlisted manual staging deployment, and a post-deployment health check.
+- `.gitlab/duo/flows/opensec-remediation.yml` defines the custom Duo Agent
+  Platform flow. It reads findings, proposes the smallest patch on an isolated
+  branch, opens a merge request, and requires pipeline/proof evidence before it
+  reports success.
+- `AGENTS.md` contains the project-level safety rules used by Duo flows.
+- `npm run live-lab` starts the local browser demo at `http://127.0.0.1:4173`.
+  It scans only the bundled vulnerable application; it never accepts a target
+  path from the browser.
+
+The deterministic CI path does not require Ollama. Model-based remediation is
+optional and must be configured in GitLab Duo. Deployment is intentionally
+manual and refuses to run unless `DEMO_DEPLOY_TARGET=approved-staging` and a
+masked `DEMO_DEPLOY_COMMAND` are configured. `DEMO_LAB_URL` enables the final
+health check. These external steps are not represented as successful until a
+real GitLab project executes them.
+
+Validate the flow locally with:
+
+```bash
+npm ci
+npm run security:flow-validate
+npm run security:proof -- artifacts/proof-result.json artifacts/remediation-result.json
+```
+
 ---
 
 ## CI/CD integration
